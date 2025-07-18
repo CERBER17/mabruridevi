@@ -114,6 +114,98 @@ export const image = (() => {
     const download = (blobUrl) => c.download(blobUrl, `image_${Date.now()}`);
 
     /**
+    * @param {string} text 
+    * @param {string|null} [logoUrl=null] 
+    * @returns {Promise<string>}
+    */
+    const generateQr = (text, logoUrl = null) => {
+        const size = 300;
+        const logoSizePercent = 0.2;
+
+        const options = {
+            margin: 0,
+            quality: 1,
+            type: 'image/png',
+            errorCorrectionLevel: 'H',
+            width: size,
+        };
+
+        /**
+         * @returns {Promise<string>}
+         */
+        const getQrCodeImg = () => new Promise((res, rej) => {
+            const worker = new Worker('./dist/generate.js');
+            const canvas = document.createElement('canvas');
+            const offscreen = canvas.transferControlToOffscreen();
+
+            canvas.onerror = rej;
+            worker.onerror = rej;
+
+            worker.onmessage = ({ data }) => {
+                data.err ? rej(data.err) : res(URL.createObjectURL(data.b));
+                worker.terminate();
+                canvas.remove();
+            };
+
+            worker.postMessage({ options, text, offscreen }, [offscreen]);
+        });
+
+        if (!logoUrl) {
+            return getQrCodeImg();
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.height = size;
+        canvas.width = size;
+
+        return c.open().then(() => Promise.all([
+            getQrCodeImg().then(loadedImage),
+            c.get(logoUrl).then(loadedImage),
+        ]).then(([qrImg, logoImg]) => {
+
+            const logoSize = logoSizePercent * size;
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = logoSize / 2;
+
+            const sourceSize = Math.min(logoImg.width, logoImg.height);
+            const sx = (logoImg.width - sourceSize) / 2;
+            const sy = (logoImg.height - sourceSize) / 2;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(qrImg, 0, 0, size, size);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius + (logoSizePercent * radius), 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.closePath();
+            ctx.restore();
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(logoImg, sx, sy, sourceSize, sourceSize, centerX - radius, centerY - radius, logoSize, logoSize);
+            ctx.restore();
+
+            const result = new Promise((res, rej) => {
+                canvas.onerror = rej;
+                canvas.toBlob((b) => b ? res(URL.createObjectURL(b)) : rej(new Error('Failed to create blob')), options.type, options.quality);
+            });
+
+            return result.finally(() => {
+                URL.revokeObjectURL(qrImg.src);
+                qrImg.remove();
+                logoImg.remove();
+                canvas.remove();
+            });
+        }));
+    };
+
+    /**
      * @returns {object}
      */
     const init = () => {
@@ -127,6 +219,7 @@ export const image = (() => {
             load,
             download,
             hasDataSrc,
+            generateQr,
         };
     };
 
