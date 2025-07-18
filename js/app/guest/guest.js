@@ -80,11 +80,11 @@ export const guest = (() => {
             util.safeInnerHTML(div, template);
 
             guestName?.appendChild(div);
-        }
 
-        const form = document.getElementById('form-name');
-        if (form) {
-            form.value = information.get('name') ?? name;
+            const form = document.getElementById('form-name');
+            if (form) {
+                form.value = name;
+            }
         }
     };
 
@@ -297,10 +297,6 @@ export const guest = (() => {
         normalizeArabicFont();
         buildGoogleCalendar();
 
-        if (information.has('presence')) {
-            document.getElementById('form-presence').value = information.get('presence') ? '1' : '2';
-        }
-
         if (information.get('info')) {
             document.getElementById('information')?.remove();
         }
@@ -360,9 +356,25 @@ export const guest = (() => {
             }
 
             // fetch after document is loaded.
-            const load = () => session.guest(params.get('k') ?? token).then(({ data }) => {
+            const load = () => session.guest(params.get('k') ?? token, params.get('id')).then(({ data }) => {
                 document.dispatchEvent(new Event('undangan.session'));
                 progress.complete('config');
+
+                if (!data.user) {
+                    progress.complete('comment', true);
+                }
+
+                if (data.user) {
+                    const form = document.getElementById('form-name');
+                    form.setAttribute('readonly', 'true');
+                    form.value = data.user.name;
+
+                    document.getElementById(`presence-${data.user.presence ? 'present' : 'absent'}`).checked = true;
+
+                    comment.show()
+                        .then(() => progress.complete('comment'))
+                        .catch(() => progress.invalid('comment'));
+                }
 
                 if (img.hasDataSrc()) {
                     img.load();
@@ -371,10 +383,6 @@ export const guest = (() => {
                 vid.load();
                 aud.load();
                 lib.load({ confetti: data.is_confetti_animation });
-
-                comment.show()
-                    .then(() => progress.complete('comment'))
-                    .catch(() => progress.invalid('comment'));
 
             }).catch(() => progress.invalid('config'));
 
@@ -391,8 +399,6 @@ export const guest = (() => {
 
         if (session.isAdmin()) {
             storage('user').clear();
-            storage('owns').clear();
-            storage('likes').clear();
             storage('session').clear();
             storage('comment').clear();
         }

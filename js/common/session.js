@@ -16,10 +16,21 @@ export const session = (() => {
     const getToken = () => ses.get('token');
 
     /**
+     * @returns {string|null}
+     */
+    const getPrtId = () => ses.get('participant_id');
+
+    /**
      * @param {string} token
      * @returns {void}
      */
     const setToken = (token) => ses.set('token', token);
+
+    /**
+     * @param {string} prtId
+     * @returns {void}
+     */
+    const setPrtId = (prtId) => ses.set('participant_id', prtId);
 
     /**
      * @param {object} body
@@ -50,13 +61,17 @@ export const session = (() => {
 
     /**
      * @param {string} token
+     * @param {string|null} prtId
      * @returns {Promise<object>}
      */
-    const guest = (token) => {
+    const guest = (token, prtId) => {
+        token = token ?? getToken();
+        prtId = prtId ?? getPrtId();
+
         return request(HTTP_GET, '/api/v2/config')
             .withCache(1000 * 60 * 30)
             .withForceCache()
-            .token(token)
+            .token(token, prtId)
             .send()
             .then((res) => {
                 if (res.code !== HTTP_STATUS_OK) {
@@ -69,6 +84,7 @@ export const session = (() => {
                 }
 
                 setToken(token);
+                setPrtId(prtId);
                 return res;
             });
     };
@@ -104,5 +120,6 @@ export const session = (() => {
         isAdmin,
         setToken,
         getToken,
+        getPrtId,
     };
 })();

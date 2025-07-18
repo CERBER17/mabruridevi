@@ -347,12 +347,9 @@ export const admin = (() => {
         session.init();
 
         if (!session.isAdmin()) {
-            storage('owns').clear();
-            storage('likes').clear();
             storage('config').clear();
             storage('comment').clear();
             storage('session').clear();
-            storage('information').clear();
         }
 
         document.addEventListener('DOMContentLoaded', domLoaded);

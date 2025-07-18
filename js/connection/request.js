@@ -408,12 +408,17 @@ export const request = (method, path) => {
         },
         /**
          * @param {string} token
+         * @param {string|null} [prtId=null]
          * @returns {ReturnType<typeof request>}
          */
-        token(token) {
+        token(token, prtId = null) {
             if (token.split('.').length === 3) {
                 req.headers.append('Authorization', 'Bearer ' + token);
                 return this;
+            }
+
+            if (prtId) {
+                req.headers.append('x-prt-id', prtId);
             }
 
             req.headers.append('x-access-key', token);

@@ -1,15 +1,9 @@
 import { dto } from '../../connection/dto.js';
-import { storage } from '../../common/storage.js';
 import { session } from '../../common/session.js';
 import { tapTapAnimation } from '../../libs/confetti.js';
-import { request, HTTP_PATCH, HTTP_POST, HTTP_STATUS_CREATED } from '../../connection/request.js';
+import { request, HTTP_POST, HTTP_DELETE } from '../../connection/request.js';
 
 export const like = (() => {
-
-    /**
-     * @type {ReturnType<typeof storage>|null}
-     */
-    let likes = null;
 
     /**
      * @type {Map<string, AbortController>|null}
@@ -34,13 +28,13 @@ export const like = (() => {
             navigator.vibrate(100);
         }
 
-        if (likes.has(id)) {
-            await request(HTTP_PATCH, '/api/comment/' + likes.get(id))
-                .token(session.getToken())
+        if (button.getAttribute('data-is-like') === 'true') {
+            await request(HTTP_DELETE, '/api/like/' + id)
+                .token(session.getToken(), session.getPrtId())
                 .send(dto.statusResponse)
                 .then((res) => {
                     if (res.data.status) {
-                        likes.unset(id);
+                        button.setAttribute('data-is-like', 'false');
 
                         heart.classList.remove('fa-solid', 'text-danger');
                         heart.classList.add('fa-regular');
@@ -53,12 +47,12 @@ export const like = (() => {
                     button.disabled = false;
                 });
         } else {
-            await request(HTTP_POST, '/api/comment/' + id)
-                .token(session.getToken())
-                .send(dto.uuidResponse)
+            await request(HTTP_POST, '/api/like/' + id)
+                .token(session.getToken(), session.getPrtId())
+                .send(dto.statusResponse)
                 .then((res) => {
-                    if (res.code === HTTP_STATUS_CREATED) {
-                        likes.set(id, res.data.uuid);
+                    if (res.data.status) {
+                        button.setAttribute('data-is-like', 'true');
 
                         heart.classList.remove('fa-regular');
                         heart.classList.add('fa-solid', 'text-danger');
@@ -95,7 +89,7 @@ export const like = (() => {
         const uuid = div.id.replace('body-content-', '');
 
         const isTapTap = tapLength < 300 && tapLength > 0;
-        const notLiked = !likes.has(uuid) && div.getAttribute('data-liked') !== 'true';
+        const notLiked = div.getAttribute('data-liked') !== 'true';
 
         if (isTapTap && notLiked) {
             tapTapAnimation(div);
@@ -138,7 +132,6 @@ export const like = (() => {
      */
     const init = () => {
         listeners = new Map();
-        likes = storage('likes');
     };
 
     return {
