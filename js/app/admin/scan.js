@@ -5,6 +5,8 @@ export const scan = (() => {
 
         window.scanner.start((decodedText, decodedResult) => {
             alert(decodedResult, ',,,', decodedText);
+        }).then(() => {
+            document.getElementById('render').querySelector('video').classList.add('rounded-4');
         });
     };
 
