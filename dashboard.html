@@ -59,6 +59,12 @@
                 </button>
             </li>
             <li class="nav-item">
+                <button class="nav-link" onclick="undangan.admin.navbar.buttonNavScan(this)">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span class="d-block" style="font-size: 0.7rem;">Scan</span>
+                </button>
+            </li>
+            <li class="nav-item">
                 <button class="nav-link" onclick="undangan.admin.navbar.buttonNavSetting(this)">
                     <i class="fa-solid fa-gear"></i>
                     <span class="d-block" style="font-size: 0.7rem;">Setting</span>
@@ -89,6 +95,11 @@
                     <li class="nav-item pe-2" role="presentation">
                         <button class="btn-theme-auto nav-link w-100 text-start fw-semibold mb-1 rounded-4 shadow-sm active" data-bs-toggle="pill" data-bs-target="#pills-home" id="button-home" type="button" role="tab" aria-controls="pills-home" aria-selected="true">
                             <i class="fa-solid fa-house ms-3 me-2"></i>Home
+                        </button>
+                    </li>
+                    <li class="nav-item pe-2" role="presentation">
+                        <button class="btn-theme-auto nav-link w-100 text-start fw-semibold mb-1 rounded-4 shadow-sm" data-bs-toggle="pill" data-bs-target="#pills-scan" id="button-scan" type="button" role="tab" aria-controls="pills-scan" aria-selected="true">
+                            <i class="fa-solid fa-qrcode ms-3 me-2"></i>Scan
                         </button>
                     </li>
                     <li class="nav-item pe-2" role="presentation">
@@ -250,6 +261,20 @@
                                 <nav class="d-flex d-none justify-content-center py-3 mb-4" id="pagination"></nav>
                             </div>
                         </div>
+                    </section>
+
+                    <!-- Scan -->
+                    <section class="tab-pane fade" id="pills-scan" role="tabpanel" tabindex="0">
+
+                        <!-- Sub Header -->
+                        <div class="rounded-4 p-2 mb-4 shadow" style="background-color: var(--bs-gray-200)">
+                            <h5 class="fw-bold my-1 ms-0 p-0" style="color: var(--bs-gray-900); font-size: 1rem;"><i class="fa-solid fa-qrcode mx-2"></i>Scan</h5>
+                        </div>
+
+                        <div id="scanner"></div>
+
+                        <button class="btn btn-sm btn-primary shadow-sm rounded-4" id="button-scanner">Scan</button>
+                        <button class="btn btn-sm btn-danger shadow-sm rounded-4" id="button-scanner-stop">Stop</button>
                     </section>
 
                     <!-- Setting -->

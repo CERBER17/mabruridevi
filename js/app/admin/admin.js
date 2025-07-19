@@ -9,6 +9,7 @@ import { session } from '../../common/session.js';
 import { offline } from '../../common/offline.js';
 import { comment } from '../components/comment.js';
 import { request, HTTP_GET, HTTP_PATCH, HTTP_PUT } from '../../connection/request.js';
+import { scan } from './scan.js';
 
 export const admin = (() => {
 
@@ -314,6 +315,7 @@ export const admin = (() => {
         lang.init();
         lang.setDefault('en');
 
+        scan.init();
         comment.init();
         offline.init();
         theme.spyTop();

@@ -34,8 +34,17 @@ export const navbar = (() => {
         showActiveTab(btn, 'button-setting');
     };
 
+    /**
+     * @param {HTMLElement} btn
+     * @returns {void}
+     */
+    const buttonNavScan = (btn) => {
+        showActiveTab(btn, 'button-scan');
+    };
+
     return {
         buttonNavHome,
         buttonNavSetting,
+        buttonNavScan,
     };
 })();
