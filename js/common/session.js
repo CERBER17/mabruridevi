@@ -69,8 +69,6 @@ export const session = (() => {
         prtId = prtId ?? getPrtId();
 
         return request(HTTP_GET, '/api/v2/config')
-            .withCache(1000 * 60 * 30)
-            .withForceCache()
             .token(token, prtId)
             .send()
             .then((res) => {

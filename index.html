@@ -395,11 +395,9 @@
                         <div class="border rounded-5 shadow p-3">
                             <h2 class="font-esthetic text-center mt-2 mb-4" style="font-size: 2.25rem;">Beri Kabarmu</h2>
 
-                            <div>
-                                <p>Terimakasih telah berencana hari dalam acara kami</p>
-                            </div>
+                            <div id="participant-information"></div>
 
-                            <form>
+                            <form id="participant-form">
                                 <div class="mb-3">
                                     <label for="form-name" class="form-label my-1"><i class="fa-solid fa-person me-2"></i>Nama</label>
                                     <input type="text" class="form-control shadow-sm rounded-4" id="form-name" minlength="2" maxlength="50" placeholder="Isikan Nama Anda" autocomplete="name" data-offline-disabled="false">
@@ -418,10 +416,10 @@
                                 </div>
 
                                 <div class="d-flex">
-                                    <button class="btn btn-secondary btn-sm rounded-4 shadow m-1" onclick="undangan.comment.send(this)" data-offline-disabled="false">
+                                    <button class="btn btn-secondary btn-sm rounded-4 shadow m-1 d-none" type="button" onclick="undangan.participant.cancelPresence(this)" data-offline-disabled="false">
                                         <i class="fa-solid fa-xmark me-2"></i>Cancel
                                     </button>
-                                    <button class="btn btn-primary btn-sm rounded-4 shadow m-1 flex-fill" onclick="undangan.comment.send(this)" data-offline-disabled="false">
+                                    <button class="btn btn-primary btn-sm rounded-4 shadow m-1 flex-fill" type="button" onclick="undangan.participant.forGuest(this)" data-offline-disabled="false">
                                         <i class="fa-solid fa-paper-plane me-2"></i>Send
                                     </button>
                                 </div>

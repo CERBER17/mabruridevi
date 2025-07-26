@@ -39,6 +39,18 @@ export const comment = (() => {
     };
 
     /**
+     * @returns {string}
+     */
+    const onNullPresence = () => {
+        const desc = lang
+            .on('id', '📢 Yuk, isi form kehadiran biar bisa liat ini')
+            .on('en', '📢 Let\'s share this invitation to get more comments! 🎉')
+            .get();
+
+        return `<div class="text-center p-4 mx-0 mt-0 mb-3 bg-theme-auto rounded-4 shadow"><p class="fw-bold p-0 m-0" style="font-size: 0.95rem;">${desc}</p></div>`;
+    };
+
+    /**
      * @param {string} id 
      * @param {boolean} disabled 
      * @returns {void}
@@ -210,7 +222,7 @@ export const comment = (() => {
         const likes = like.getButtonLike(id);
         likes.disabled = true;
 
-        request(HTTP_DELETE, '/api/comment/' + id)
+        request(HTTP_DELETE, '/api/v2/comment/' + id)
             .token(session.getToken(), session.getPrtId())
             .send(dto.statusResponse)
             .then((res) => {
@@ -276,7 +288,7 @@ export const comment = (() => {
 
         const btn = util.disableButton(button);
 
-        const status = await request(HTTP_PATCH, `/api/comment/${id}?lang=${lang.getLanguage()}`)
+        const status = await request(HTTP_PATCH, `/api/v2/comment/${id}?lang=${lang.getLanguage()}`)
             .token(session.getToken(), session.getPrtId())
             .body(dto.updateCommentRequest(gifIsOpen ? null : form.value, gifId))
             .send(dto.statusResponse)
@@ -363,7 +375,7 @@ export const comment = (() => {
 
         const btn = util.disableButton(button);
 
-        const response = await request(HTTP_POST, `/api/comment?lang=${lang.getLanguage()}`)
+        const response = await request(HTTP_POST, `/api/v2/comment?lang=${lang.getLanguage()}`)
             .token(session.getToken(), session.getPrtId())
             .body(dto.postCommentRequest(id, gifIsOpen ? null : form.value, gifId))
             .send(dto.getCommentResponse);
@@ -527,6 +539,9 @@ export const comment = (() => {
 
         comments = document.getElementById('comments');
         comments.addEventListener('undangan.comment.show', show);
+        if (!session.isAdmin() && !session.getPrtId()) {
+            comments.innerHTML = onNullPresence();
+        }
 
         showHide = storage('comment');
 

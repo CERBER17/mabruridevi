@@ -12,6 +12,7 @@ import { session } from '../../common/session.js';
 import { offline } from '../../common/offline.js';
 import { comment } from '../components/comment.js';
 import * as confetti from '../../libs/confetti.js';
+import { participant } from '../components/participant.js';
 
 export const guest = (() => {
 
@@ -358,6 +359,7 @@ export const guest = (() => {
             // fetch after document is loaded.
             const load = () => session.guest(params.get('k') ?? token, params.get('id')).then(({ data }) => {
                 document.dispatchEvent(new Event('undangan.session'));
+                participant.init();
                 progress.complete('config');
 
                 if (!data.user) {
@@ -409,6 +411,7 @@ export const guest = (() => {
             util,
             theme,
             comment,
+            participant,
             guest: {
                 open,
                 modal,

@@ -303,11 +303,7 @@ export const util = (() => {
      * @param {Blob} blob 
      * @returns {Promise<string|null>}
      */
-    const detectMimeType = (blob) => blob.slice(0, 32).arrayBuffer().then((buff) => {
-
-        const bytes = new Uint8Array(buff);
-        const text = new TextDecoder().decode(bytes);
-
+    const detectMimeType = (blob) => blob.slice(0, 32).arrayBuffer().then((b) => new Uint8Array(b)).then((bytes) => {
         for (const sig of signatures) {
             let matched = true;
 
@@ -325,6 +321,8 @@ export const util = (() => {
             if (!sig.extra) {
                 return sig.mime;
             }
+
+            const text = (new TextDecoder()).decode(bytes);
 
             if (sig.mime === 'video/mp4' || sig.mime === 'video/quicktime') {
                 const ftypIndex = text.indexOf('ftyp');
@@ -364,5 +362,6 @@ export const util = (() => {
         changeOpacity,
         getGMTOffset,
         convertMarkdownToHTML,
+        detectMimeType,
     };
 })();

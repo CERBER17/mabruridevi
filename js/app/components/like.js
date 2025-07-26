@@ -29,7 +29,7 @@ export const like = (() => {
         }
 
         if (button.getAttribute('data-is-like') === 'true') {
-            await request(HTTP_DELETE, '/api/like/' + id)
+            await request(HTTP_DELETE, '/api/v2/like/' + id)
                 .token(session.getToken(), session.getPrtId())
                 .send(dto.statusResponse)
                 .then((res) => {
@@ -47,7 +47,7 @@ export const like = (() => {
                     button.disabled = false;
                 });
         } else {
-            await request(HTTP_POST, '/api/like/' + id)
+            await request(HTTP_POST, '/api/v2/like/' + id)
                 .token(session.getToken(), session.getPrtId())
                 .send(dto.statusResponse)
                 .then((res) => {

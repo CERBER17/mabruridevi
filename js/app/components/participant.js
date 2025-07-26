@@ -1,7 +1,82 @@
 import { util } from '../../common/util.js';
-import { HTTP_GET, request } from '../../connection/request.js';
+import { lang } from '../../common/language.js';
+import { session } from '../../common/session.js';
+import { storage } from '../../common/storage.js';
+import { HTTP_GET, HTTP_PATCH, HTTP_POST, request } from '../../connection/request.js';
 
 export const participant = (() => {
+
+    /**
+     * @returns {string}
+     */
+    const onPresent = () => {
+        return lang
+            .on('id', 'Terima kasih atas rencana kehadiran Anda di momen spesial kami. Jika ingin mengubah status kehadiran, silakan klik')
+            .get();
+    };
+
+    /**
+     * @returns {string}
+     */
+    const onAbsent = () => {
+        return lang
+            .on('id', 'Terima kasih telah memberi kabar. Semoga kita bisa dipertemukan di lain waktu. Jika ingin mengubah status kehadiran, silakan klik')
+            .get();
+    };
+
+    /**
+     * @param {HTMLButtonElement} button 
+     * @returns {void}
+     */
+    const forGuest = (button) => {
+        const formName = document.getElementById('form-name');
+        const formPresence = document.querySelector('input[name="presenceRadios"]:checked');
+
+        if (!formName || formName.value.trim().length === 0) {
+            util.notify('please input name').warning();
+            return;
+        }
+
+        if (!formPresence) {
+            util.notify('please select presence').warning();
+            return;
+        }
+
+        const btn = util.disableButton(button);
+        const isNewPrt = !session.getPrtId();
+
+        request(isNewPrt ? HTTP_POST : HTTP_PATCH, '/api/participant')
+            .token(session.getToken(), session.getPrtId())
+            .body({
+                name: formName.value,
+                presence: formPresence.value === 'present'
+            })
+            .send()
+            .then((res) => isNewPrt ? session.guest(session.getToken(), res.data.uuid) : res)
+            .then(() => {
+                const text = formPresence.value === 'present' ? onPresent() : onAbsent();
+                document.getElementById('participant-form').classList.add('d-none');
+                document.getElementById('participant-information').classList.remove('d-none');
+                document.getElementById('participant-information').innerHTML = `${text} <button style="font-size: 0.8rem;" onclick="undangan.participant.changePresence()" class="btn btn-sm btn-outline-auto rounded-4 py-0 shadow-sm" data-offline-disabled="false">ubah</button>`;
+                document.getElementById('comments').dispatchEvent(new Event('undangan.comment.show'));
+            })
+            .finally(() => {
+                btn.restore();
+            });
+    };
+
+    const changePresence = () => {
+        document.getElementById('participant-information').classList.add('d-none');
+        document.getElementById('participant-form').classList.remove('d-none');
+        if (session.getPrtId()) {
+            document.querySelector('[onclick="undangan.participant.cancelPresence(this)"]').classList.remove('d-none');
+        }
+    };
+
+    const cancelPresence = () => {
+        document.getElementById('participant-information').classList.remove('d-none');
+        document.getElementById('participant-form').classList.add('d-none');
+    };
 
     const renderTracker = (c) => {
         return `
@@ -44,4 +119,18 @@ export const participant = (() => {
             .catch((err) => setResult(err.message));
     };
 
+    const init = () => {
+        if (session.getPrtId()) {
+            const text = storage('config').get('user').presence ? onPresent() : onAbsent();
+            document.getElementById('participant-form').classList.add('d-none');
+            document.getElementById('participant-information').innerHTML = `${text} <button style="font-size: 0.8rem;" onclick="undangan.participant.changePresence()" class="btn btn-sm btn-outline-auto rounded-4 py-0 shadow-sm" data-offline-disabled="false">ubah</button>`;
+        }
+    };
+
+    return {
+        init,
+        forGuest,
+        changePresence,
+        cancelPresence
+    };
 })();
