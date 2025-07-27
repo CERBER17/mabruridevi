@@ -123,7 +123,6 @@ export const image = (() => {
         const logoSizePercent = 0.2;
 
         const options = {
-            margin: 0,
             quality: 1,
             type: 'image/png',
             errorCorrectionLevel: 'H',
@@ -133,22 +132,21 @@ export const image = (() => {
         /**
          * @returns {Promise<string>}
          */
-        const getQrCodeImg = () => new Promise((res, rej) => {
-            const worker = new Worker('./dist/generate.js');
-            const canvas = document.createElement('canvas');
-            const offscreen = canvas.transferControlToOffscreen();
+        const getQrCodeImg = async () => {
 
-            canvas.onerror = rej;
-            worker.onerror = rej;
+            if (typeof window.generateQrCode === 'undefined') {
+                await new Promise((res, rej) => {
+                    const sc = document.createElement('script');
+                    sc.onload = res;
+                    sc.onerror = rej;
 
-            worker.onmessage = ({ data }) => {
-                data.err ? rej(data.err) : res(URL.createObjectURL(data.b));
-                worker.terminate();
-                canvas.remove();
-            };
+                    sc.src = './dist/generate.js';
+                    document.head.appendChild(sc);
+                });
+            }
 
-            worker.postMessage({ options, text, offscreen }, [offscreen]);
-        });
+            return window.generateQrCode.generate(text, options);
+        };
 
         if (!logoUrl) {
             return getQrCodeImg();

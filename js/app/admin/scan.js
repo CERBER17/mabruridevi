@@ -1,10 +1,16 @@
 
 export const scan = (() => {
 
+    let toastBootstrap = null;
+
     const x = () => {
 
-        window.scanner.start((decodedText, decodedResult) => {
-            alert(decodedResult, ',,,', decodedText);
+        window.scannerQrCode.start((decodedText) => {
+            window.scannerQrCode.pause();
+            alert(decodedText);
+            toastBootstrap.show();
+
+            window.scannerQrCode.resume();
         }).then(() => {
             document.getElementById('render').querySelector('video').classList.add('rounded-4');
         });
@@ -12,7 +18,8 @@ export const scan = (() => {
 
     return {
         init: async () => {
-            if (typeof window.scanner === 'undefined') {
+            toastBootstrap = window.bootstrap.Toast.getOrCreateInstance(document.getElementById('liveToast'));
+            if (typeof window.scannerQrCode === 'undefined') {
                 await new Promise((res, rej) => {
                     const sc = document.createElement('script');
                     sc.onload = res;
@@ -23,12 +30,12 @@ export const scan = (() => {
                 });
             }
 
-            window.scanner.init('render');
+            window.scannerQrCode.init('render');
 
             document.getElementById('button-scanner').addEventListener('click', x);
 
             document.getElementById('button-scanner-stop').addEventListener('click', () => {
-                window.scanner.stop();
+                window.scannerQrCode.stop();
             });
         },
         // start,

@@ -1,8 +1,7 @@
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
-window.scanner = (() => {
+window.scannerQrCode = (() => {
     const config = {
-        fps: 10,
         aspectRatio: 1,
         formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
     };
@@ -19,6 +18,14 @@ window.scanner = (() => {
          * @returns {Promise<void>}
          */
         start: (res, rej = null) => html5QrCode.start({ facingMode: 'environment' }, config, res, rej),
+        /**
+         * @returns {void} 
+         */
+        pause: () => html5QrCode.pause(true),
+        /**
+         * @returns {void} 
+         */
+        resume: () => html5QrCode.resume(),
         /**
          * @returns {Promise<void>}
          */
