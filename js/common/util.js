@@ -35,6 +35,25 @@ export const util = (() => {
         { name: 'Chrome OS', regex: /CrOS/i },
     ];
 
+    const signatures = [
+        { mime: 'audio/mpeg', match: [0xFF, 0xFB] },
+        { mime: 'audio/mpeg', match: [0xFF, 0xF3] },
+        { mime: 'audio/mpeg', match: [0xFF, 0xF2] },
+        { mime: 'audio/mpeg', match: [0x49, 0x44, 0x33] },
+        { mime: 'audio/wav', match: [0x52, 0x49, 0x46, 0x46], extra: 'WAVE' },
+        { mime: 'audio/aac', match: [0xFF, 0xF1] },
+        { mime: 'audio/aac', match: [0xFF, 0xF9] },
+
+        { mime: 'video/mp4', match: [0x00, 0x00, 0x00], extra: 'ftyp' },
+        { mime: 'video/webm', match: [0x1A, 0x45, 0xDF, 0xA3] },
+        { mime: 'video/quicktime', match: [0x00, 0x00, 0x00], extra: 'ftypqt' },
+
+        { mime: 'image/jpeg', match: [0xFF, 0xD8, 0xFF] },
+        { mime: 'image/png', match: [0x89, 0x50, 0x4E, 0x47] },
+        { mime: 'image/gif', match: [0x47, 0x49, 0x46, 0x38] },
+        { mime: 'image/webp', match: [0x52, 0x49, 0x46, 0x46], extra: 'WEBP' },
+    ];
+
     /**
      * @param {string} unsafe
      * @returns {string}
@@ -280,6 +299,52 @@ export const util = (() => {
         return str;
     };
 
+    /**
+     * @param {Blob} blob 
+     * @returns {Promise<string|null>}
+     */
+    const detectMimeType = (blob) => blob.slice(0, 32).arrayBuffer().then((b) => new Uint8Array(b)).then((bytes) => {
+        for (const sig of signatures) {
+            let matched = true;
+
+            for (let i = 0; i < sig.match.length; i++) {
+                if (bytes[i] !== sig.match[i]) {
+                    matched = false;
+                    break;
+                }
+            }
+
+            if (!matched) {
+                continue;
+            }
+
+            if (!sig.extra) {
+                return sig.mime;
+            }
+
+            const text = (new TextDecoder()).decode(bytes);
+
+            if (sig.mime === 'video/mp4' || sig.mime === 'video/quicktime') {
+                const ftypIndex = text.indexOf('ftyp');
+                if (ftypIndex !== -1) {
+                    const brand = text.substring(ftypIndex + 4, ftypIndex + 8);
+
+                    if (sig.mime === 'video/mp4' && ['isom', 'mp41', 'mp42', 'avc1', 'dash', 'iso2'].some((b) => brand.includes(b))) {
+                        return sig.mime;
+                    }
+
+                    if (sig.mime === 'video/quicktime' && brand.includes('qt')) {
+                        return sig.mime;
+                    }
+                }
+            } else if (text.includes(sig.extra)) {
+                return sig.mime;
+            }
+        }
+
+        return null;
+    });
+
     return {
         loader,
         ask,
@@ -297,5 +362,6 @@ export const util = (() => {
         changeOpacity,
         getGMTOffset,
         convertMarkdownToHTML,
+        detectMimeType,
     };
 })();

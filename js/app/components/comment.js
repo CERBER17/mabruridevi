@@ -7,14 +7,9 @@ import { dto } from '../../connection/dto.js';
 import { lang } from '../../common/language.js';
 import { storage } from '../../common/storage.js';
 import { session } from '../../common/session.js';
-import { request, HTTP_GET, HTTP_POST, HTTP_DELETE, HTTP_PUT, HTTP_STATUS_CREATED } from '../../connection/request.js';
+import { request, HTTP_GET, HTTP_POST, HTTP_DELETE, HTTP_STATUS_CREATED, HTTP_PATCH } from '../../connection/request.js';
 
 export const comment = (() => {
-
-    /**
-     * @type {ReturnType<typeof storage>|null}
-     */
-    let owns = null;
 
     /**
      * @type {ReturnType<typeof storage>|null}
@@ -37,6 +32,18 @@ export const comment = (() => {
     const onNullComment = () => {
         const desc = lang
             .on('id', '📢 Yuk, share undangan ini biar makin rame komentarnya! 🎉')
+            .on('en', '📢 Let\'s share this invitation to get more comments! 🎉')
+            .get();
+
+        return `<div class="text-center p-4 mx-0 mt-0 mb-3 bg-theme-auto rounded-4 shadow"><p class="fw-bold p-0 m-0" style="font-size: 0.95rem;">${desc}</p></div>`;
+    };
+
+    /**
+     * @returns {string}
+     */
+    const onNullPresence = () => {
+        const desc = lang
+            .on('id', '📢 Yuk, isi form kehadiran biar bisa liat ini')
             .on('en', '📢 Let\'s share this invitation to get more comments! 🎉')
             .get();
 
@@ -73,6 +80,7 @@ export const comment = (() => {
         const uuid = button.getAttribute('data-uuid');
         const currentShow = showHide.get('show');
 
+        button.disabled = true;
         button.setAttribute('data-show', isShow ? 'false' : 'true');
         button.innerText = isShow ? `Show replies (${ids.length})` : 'Hide replies';
         showHide.set('show', isShow ? currentShow.filter((i) => i !== uuid) : [...currentShow, uuid]);
@@ -88,6 +96,8 @@ export const comment = (() => {
 
             document.getElementById(id).classList.toggle('d-none', isShow);
         }
+
+        button.disabled = false;
     };
 
     /**
@@ -103,50 +113,6 @@ export const comment = (() => {
         util.safeInnerHTML(content, util.convertMarkdownToHTML(util.escapeHtml(isCollapsed ? original : original.slice(0, card.maxCommentLength) + '...')));
         anchor.innerText = isCollapsed ? 'Sebagian' : 'Selengkapnya';
         anchor.setAttribute('data-show', isCollapsed ? 'true' : 'false');
-    };
-
-    /**
-     * @param {ReturnType<typeof dto.getCommentResponse>} c
-     * @returns {Promise<void>}
-     */
-    const fetchTracker = async (c) => {
-        if (c.comments) {
-            await Promise.all(c.comments.map((v) => fetchTracker(v)));
-        }
-
-        if (!c.ip || !c.user_agent || c.is_admin) {
-            return;
-        }
-
-        /**
-         * @param {string} result 
-         * @returns {void}
-         */
-        const setResult = (result) => {
-            const commentIp = document.getElementById(`ip-${util.escapeHtml(c.uuid)}`);
-            util.safeInnerHTML(commentIp, `<i class="fa-solid fa-location-dot me-1"></i>${util.escapeHtml(c.ip)} <strong>${util.escapeHtml(result)}</strong>`);
-        };
-
-        // Free for commercial and non-commercial use.
-        await request(HTTP_GET, `https://apip.cc/api-json/${c.ip}`)
-            .withCache()
-            .withRetry()
-            .default()
-            .then((res) => res.json())
-            .then((res) => {
-                let result = 'localhost';
-
-                if (res.status === 'success') {
-                    if (res.City.length !== 0 && res.RegionName.length !== 0) {
-                        result = res.City + ' - ' + res.RegionName;
-                    } else if (res.Capital.length !== 0 && res.CountryName.length !== 0) {
-                        result = res.Capital + ' - ' + res.CountryName;
-                    }
-                }
-
-                setResult(result);
-            })
-            .catch((err) => setResult(err.message));
     };
 
     /**
@@ -195,9 +161,7 @@ export const comment = (() => {
     const show = () => {
 
         // remove all event listener.
-        lastRender.forEach((u) => {
-            like.removeListener(u);
-        });
+        lastRender.forEach((u) => like.removeListener(u));
 
         if (comments.getAttribute('data-loading') === 'false') {
             comments.setAttribute('data-loading', 'true');
@@ -205,7 +169,7 @@ export const comment = (() => {
         }
 
         return request(HTTP_GET, `/api/v2/comment?per=${pagination.getPer()}&next=${pagination.getNext()}&lang=${lang.getLanguage()}`)
-            .token(session.getToken())
+            .token(session.getToken(), session.getPrtId())
             .withCache(1000 * 30)
             .withForceCache()
             .send(dto.getCommentsResponseV2)
@@ -231,73 +195,59 @@ export const comment = (() => {
                 }
 
                 util.safeInnerHTML(comments, data);
-
-                lastRender.forEach((u) => {
-                    like.addListener(u);
-                });
+                lastRender.forEach((u) => like.addListener(u));
 
                 return res;
             })
-            .then(async (res) => {
+            .then((res) => {
                 comments.dispatchEvent(new Event('undangan.comment.result'));
-
-                if (res.data.lists && session.isAdmin()) {
-                    await Promise.all(res.data.lists.map((v) => fetchTracker(v)));
-                }
-
                 pagination.setTotal(res.data.count);
-                comments.dispatchEvent(new Event('undangan.comment.done'));
                 return res;
             });
     };
 
     /**
      * @param {HTMLButtonElement} button 
-     * @returns {Promise<void>}
+     * @returns {void}
      */
-    const remove = async (button) => {
+    const remove = (button) => {
         if (!util.ask('Are you sure?')) {
             return;
         }
 
         const id = button.getAttribute('data-uuid');
-
-        if (session.isAdmin()) {
-            owns.set(id, button.getAttribute('data-own'));
-        }
-
         changeActionButton(id, true);
+
         const btn = util.disableButton(button);
         const likes = like.getButtonLike(id);
         likes.disabled = true;
 
-        const status = await request(HTTP_DELETE, '/api/comment/' + owns.get(id))
-            .token(session.getToken())
+        request(HTTP_DELETE, '/api/v2/comment/' + id)
+            .token(session.getToken(), session.getPrtId())
             .send(dto.statusResponse)
-            .then((res) => res.data.status);
+            .then((res) => {
+                if (!res.data.status) {
+                    btn.restore();
+                    likes.disabled = false;
+                    changeActionButton(id, false);
+                    return;
+                }
 
-        if (!status) {
-            btn.restore();
-            likes.disabled = false;
-            changeActionButton(id, false);
-            return;
-        }
+                document.querySelectorAll('a[onclick="undangan.comment.showOrHide(this)"]').forEach((n) => {
+                    const oldUuids = n.getAttribute('data-uuids').split(',');
 
-        document.querySelectorAll('a[onclick="undangan.comment.showOrHide(this)"]').forEach((n) => {
-            const oldUuids = n.getAttribute('data-uuids').split(',');
+                    if (oldUuids.includes(id)) {
+                        const uuids = oldUuids.filter((i) => i !== id).join(',');
+                        uuids.length === 0 ? n.remove() : n.setAttribute('data-uuids', uuids);
+                    }
+                });
 
-            if (oldUuids.includes(id)) {
-                const uuids = oldUuids.filter((i) => i !== id).join(',');
-                uuids.length === 0 ? n.remove() : n.setAttribute('data-uuids', uuids);
-            }
-        });
+                document.getElementById(id).remove();
 
-        owns.unset(id);
-        document.getElementById(id).remove();
-
-        if (comments.children.length === 0) {
-            comments.innerHTML = onNullComment();
-        }
+                if (comments.children.length === 0) {
+                    comments.innerHTML = onNullComment();
+                }
+            });
     };
 
     /**
@@ -306,16 +256,6 @@ export const comment = (() => {
      */
     const update = async (button) => {
         const id = button.getAttribute('data-uuid');
-
-        let isPresent = false;
-        const presence = document.getElementById(`form-inner-presence-${id}`);
-        if (presence) {
-            presence.disabled = true;
-            isPresent = presence.value === '1';
-        }
-
-        const badge = document.getElementById(`badge-${id}`);
-        const isChecklist = !!badge && badge.getAttribute('data-is-presence') === 'true';
 
         const gifIsOpen = gif.isOpen(id);
         const gifId = gif.getResultId(id);
@@ -327,7 +267,7 @@ export const comment = (() => {
 
         const form = document.getElementById(`form-inner-${id}`);
 
-        if (id && !gifIsOpen && util.base64Encode(form.value) === form.getAttribute('data-original') && isChecklist === isPresent) {
+        if (id && !gifIsOpen && util.base64Encode(form.value) === form.getAttribute('data-original')) {
             removeInnerForm(id);
             return;
         }
@@ -348,9 +288,9 @@ export const comment = (() => {
 
         const btn = util.disableButton(button);
 
-        const status = await request(HTTP_PUT, `/api/comment/${owns.get(id)}?lang=${lang.getLanguage()}`)
-            .token(session.getToken())
-            .body(dto.updateCommentRequest(presence ? isPresent : null, gifIsOpen ? null : form.value, gifId))
+        const status = await request(HTTP_PATCH, `/api/v2/comment/${id}?lang=${lang.getLanguage()}`)
+            .token(session.getToken(), session.getPrtId())
+            .body(dto.updateCommentRequest(gifIsOpen ? null : form.value, gifId))
             .send(dto.statusResponse)
             .then((res) => res.data.status);
 
@@ -360,10 +300,6 @@ export const comment = (() => {
 
         if (cancel) {
             cancel.disabled = false;
-        }
-
-        if (presence) {
-            presence.disabled = false;
         }
 
         btn.restore();
@@ -383,36 +319,23 @@ export const comment = (() => {
 
         removeInnerForm(id);
 
-        if (!gifIsOpen) {
-            const showButton = document.querySelector(`[onclick="undangan.comment.showMore(this, '${id}')"]`);
-
-            const content = document.getElementById(`content-${id}`);
-            content.setAttribute('data-comment', util.base64Encode(form.value));
-
-            const original = util.convertMarkdownToHTML(util.escapeHtml(form.value));
-            if (form.value.length > card.maxCommentLength) {
-                util.safeInnerHTML(content, showButton?.getAttribute('data-show') === 'false' ? original.slice(0, card.maxCommentLength) + '...' : original);
-                showButton?.classList.replace('d-none', 'd-block');
-            } else {
-                util.safeInnerHTML(content, original);
-                showButton?.classList.replace('d-block', 'd-none');
-            }
-        }
-
-        if (presence) {
-            document.getElementById('form-presence').value = isPresent ? '1' : '2';
-            storage('information').set('presence', isPresent);
-        }
-
-        if (!presence || !badge) {
+        if (gifIsOpen) {
             return;
         }
 
-        badge.classList.toggle('fa-circle-xmark', !isPresent);
-        badge.classList.toggle('text-danger', !isPresent);
+        const showButton = document.querySelector(`[onclick="undangan.comment.showMore(this, '${id}')"]`);
+        const content = document.getElementById(`content-${id}`);
 
-        badge.classList.toggle('fa-circle-check', isPresent);
-        badge.classList.toggle('text-success', isPresent);
+        content.setAttribute('data-comment', util.base64Encode(form.value));
+        const original = util.convertMarkdownToHTML(util.escapeHtml(form.value));
+
+        if (form.value.length > card.maxCommentLength) {
+            util.safeInnerHTML(content, showButton?.getAttribute('data-show') === 'false' ? original.slice(0, card.maxCommentLength) + '...' : original);
+            showButton?.classList.replace('d-none', 'd-block');
+        } else {
+            util.safeInnerHTML(content, original);
+            showButton?.classList.replace('d-block', 'd-none');
+        }
     };
 
     /**
@@ -421,25 +344,6 @@ export const comment = (() => {
      */
     const send = async (button) => {
         const id = button.getAttribute('data-uuid');
-
-        const name = document.getElementById('form-name');
-        const nameValue = name.value;
-
-        if (nameValue.length === 0) {
-            util.notify('Name cannot be empty.').warning();
-
-            if (id) {
-                // scroll to form.
-                name.scrollIntoView({ block: 'center' });
-            }
-            return;
-        }
-
-        const presence = document.getElementById('form-presence');
-        if (!id && presence && presence.value === '0') {
-            util.notify('Please select your attendance status.').warning();
-            return;
-        }
 
         const gifIsOpen = gif.isOpen(id ? id : gif.default);
         const gifId = gif.getResultId(id ? id : gif.default);
@@ -460,14 +364,6 @@ export const comment = (() => {
             return;
         }
 
-        if (!id && name && !session.isAdmin()) {
-            name.disabled = true;
-        }
-
-        if (!session.isAdmin() && presence && presence.value !== '0') {
-            presence.disabled = true;
-        }
-
         if (form) {
             form.disabled = true;
         }
@@ -478,25 +374,11 @@ export const comment = (() => {
         }
 
         const btn = util.disableButton(button);
-        const isPresence = presence ? presence.value === '1' : true;
 
-        if (!session.isAdmin()) {
-            const info = storage('information');
-            info.set('name', nameValue);
-
-            if (!id) {
-                info.set('presence', isPresence);
-            }
-        }
-
-        const response = await request(HTTP_POST, `/api/comment?lang=${lang.getLanguage()}`)
-            .token(session.getToken())
-            .body(dto.postCommentRequest(id, nameValue, isPresence, gifIsOpen ? null : form.value, gifId))
+        const response = await request(HTTP_POST, `/api/v2/comment?lang=${lang.getLanguage()}`)
+            .token(session.getToken(), session.getPrtId())
+            .body(dto.postCommentRequest(id, gifIsOpen ? null : form.value, gifId))
             .send(dto.getCommentResponse);
-
-        if (name) {
-            name.disabled = false;
-        }
 
         if (form) {
             form.disabled = false;
@@ -504,10 +386,6 @@ export const comment = (() => {
 
         if (cancel) {
             cancel.disabled = false;
-        }
-
-        if (presence) {
-            presence.disabled = false;
         }
 
         if (gifIsOpen && gifId) {
@@ -520,7 +398,16 @@ export const comment = (() => {
             return;
         }
 
-        owns.set(response.data.uuid, response.data.own);
+        response.data.is_comment = true;
+        response.data.comment = form.value;
+        response.data.presence = null;
+        response.data.name = storage('user').get('name');
+
+        if (!session.isAdmin()) {
+            const guestUser = storage('config').get('user');
+            response.data.presence = guestUser.presence;
+            response.data.name = guestUser.name;
+        }
 
         if (form) {
             form.value = null;
@@ -543,21 +430,20 @@ export const comment = (() => {
             }
 
             response.data.is_parent = true;
-            response.data.is_admin = session.isAdmin();
             comments.insertAdjacentHTML('afterbegin', await card.renderContentMany([response.data]));
             comments.scrollIntoView();
         }
 
         if (id) {
+            removeInnerForm(id);
+
             showHide.set('hidden', showHide.get('hidden').concat([dto.commentShowMore(response.data.uuid, true)]));
             showHide.set('show', showHide.get('show').concat([id]));
 
-            removeInnerForm(id);
-
             response.data.is_parent = false;
-            response.data.is_admin = session.isAdmin();
             document.getElementById(`reply-content-${id}`).insertAdjacentHTML('beforeend', await card.renderContentSingle(response.data));
 
+            let uuids = [response.data.uuid];
             const anchorTag = document.getElementById(`button-${id}`).querySelector('a');
             if (anchorTag) {
                 if (anchorTag.getAttribute('data-show') === 'false') {
@@ -565,13 +451,11 @@ export const comment = (() => {
                 }
 
                 anchorTag.remove();
+                uuids = anchorTag.getAttribute('data-uuids').split(',').concat(uuids);
             }
 
-            const uuids = [response.data.uuid];
-            const readMoreElement = document.createRange().createContextualFragment(card.renderReadMore(id, anchorTag ? anchorTag.getAttribute('data-uuids').split(',').concat(uuids) : uuids));
-
             const buttonLike = like.getButtonLike(id);
-            buttonLike.parentNode.insertBefore(readMoreElement, buttonLike);
+            buttonLike.parentNode.insertBefore(document.createRange().createContextualFragment(card.renderReadMore(id, uuids)), buttonLike);
         }
 
         like.addListener(response.data.uuid);
@@ -584,22 +468,16 @@ export const comment = (() => {
      * @returns {Promise<void>}
      */
     const cancel = async (button, id) => {
-        const presence = document.getElementById(`form-inner-presence-${id}`);
-        const isPresent = presence ? presence.value === '1' : false;
-
-        const badge = document.getElementById(`badge-${id}`);
-        const isChecklist = badge && owns.has(id) && presence ? badge.getAttribute('data-is-presence') === 'true' : false;
-
         const btn = util.disableButton(button);
 
-        if (gif.isOpen(id) && ((!gif.getResultId(id) && isChecklist === isPresent) || util.ask('Are you sure?'))) {
+        if (gif.isOpen(id) && (!gif.getResultId(id) || util.ask('Are you sure?'))) {
             await gif.remove(id);
             removeInnerForm(id);
             return;
         }
 
         const form = document.getElementById(`form-inner-${id}`);
-        if (form.value.length === 0 || (util.base64Encode(form.value) === form.getAttribute('data-original') && isChecklist === isPresent) || util.ask('Are you sure?')) {
+        if (form.value.length === 0 || util.base64Encode(form.value) === form.getAttribute('data-original') || util.ask('Are you sure?')) {
             removeInnerForm(id);
             return;
         }
@@ -622,28 +500,18 @@ export const comment = (() => {
 
     /**
      * @param {HTMLButtonElement} button 
-     * @param {boolean} is_parent
      * @returns {Promise<void>}
      */
-    const edit = async (button, is_parent) => {
+    const edit = async (button) => {
         const id = button.getAttribute('data-uuid');
-
         changeActionButton(id, true);
-
-        if (session.isAdmin()) {
-            owns.set(id, button.getAttribute('data-own'));
-        }
-
-        const badge = document.getElementById(`badge-${id}`);
-        const isChecklist = !!badge && badge.getAttribute('data-is-presence') === 'true';
 
         const gifImage = document.getElementById(`img-gif-${id}`);
         if (gifImage) {
             await gif.remove(id);
         }
 
-        const isParent = is_parent && !session.isAdmin();
-        document.getElementById(`button-${id}`).insertAdjacentElement('afterend', card.renderEdit(id, isChecklist, isParent, !!gifImage));
+        document.getElementById(`button-${id}`).insertAdjacentElement('afterend', card.renderEdit(id, !!gifImage));
 
         if (gifImage) {
             gif.onOpen(id, () => {
@@ -656,10 +524,8 @@ export const comment = (() => {
         }
 
         const formInner = document.getElementById(`form-inner-${id}`);
-        const original = util.base64Decode(document.getElementById(`content-${id}`)?.getAttribute('data-comment'));
-
-        formInner.value = original;
-        formInner.setAttribute('data-original', util.base64Encode(original));
+        formInner.value = util.base64Decode(document.getElementById(`content-${id}`)?.getAttribute('data-comment'));
+        formInner.setAttribute('data-original', util.base64Encode(formInner.value));
     };
 
     /**
@@ -673,8 +539,10 @@ export const comment = (() => {
 
         comments = document.getElementById('comments');
         comments.addEventListener('undangan.comment.show', show);
+        if (!session.isAdmin() && !session.getPrtId()) {
+            comments.innerHTML = onNullPresence();
+        }
 
-        owns = storage('owns');
         showHide = storage('comment');
 
         if (!showHide.has('hidden')) {

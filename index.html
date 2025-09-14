@@ -385,6 +385,45 @@
                     </div>
                 </section>
 
+                <!-- Confirmation -->
+                <section class="bg-white-black pt-3 pb-4">
+                    <div class="container">
+                        <div class="border rounded-5 shadow p-3">
+                            <h2 class="font-esthetic text-center mt-2 mb-4" style="font-size: 2.25rem;">Beri Kabarmu</h2>
+
+                            <div id="participant-information"></div>
+
+                            <form id="participant-form">
+                                <div class="mb-3">
+                                    <label for="form-name" class="form-label my-1"><i class="fa-solid fa-person me-2"></i>Nama</label>
+                                    <input type="text" class="form-control shadow-sm rounded-4" id="form-name" minlength="2" maxlength="50" placeholder="Isikan Nama Anda" autocomplete="name" data-offline-disabled="false">
+                                </div>
+
+                                <div class="mb-3">
+                                    <p class="my-1"><i class="fa-solid fa-person-circle-question me-2"></i>Presensi</p>
+                                    <div class="form-check ms-2 mt-2">
+                                        <input class="form-check-input cursor-pointer" type="radio" id="presence-present" value="present" name="presenceRadios" autocomplete="off" data-offline-disabled="false">
+                                        <label class="form-check-label cursor-pointer" for="presence-present">&#9989; Datang</label>
+                                    </div>
+                                    <div class="form-check ms-2 mt-2">
+                                        <input class="form-check-input cursor-pointer" type="radio" id="presence-absent" value="absent" name="presenceRadios" autocomplete="off" data-offline-disabled="false">
+                                        <label class="form-check-label cursor-pointer" for="presence-absent">&#10060; Berhalangan </label>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex">
+                                    <button class="btn btn-secondary btn-sm rounded-4 shadow m-1 d-none" type="button" onclick="undangan.participant.cancelPresence(this)" data-offline-disabled="false">
+                                        <i class="fa-solid fa-xmark me-2"></i>Cancel
+                                    </button>
+                                    <button class="btn btn-primary btn-sm rounded-4 shadow m-1 flex-fill" type="button" onclick="undangan.participant.forGuest(this)" data-offline-disabled="false">
+                                        <i class="fa-solid fa-paper-plane me-2"></i>Send
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Gallery -->
                 <section class="bg-white-black pb-5 pt-3" id="gallery">
                     <div class="container">
@@ -536,20 +575,6 @@
                     <div class="container">
                         <div class="border rounded-5 shadow p-3 mb-2">
                             <h2 class="font-esthetic text-center mt-2 mb-4" style="font-size: 2.25rem;">Ucapan &amp; Doa</h2>
-
-                            <div class="mb-3">
-                                <label for="form-name" class="form-label my-1"><i class="fa-solid fa-person me-2"></i>Nama</label>
-                                <input type="text" class="form-control shadow-sm rounded-4" id="form-name" minlength="2" maxlength="50" placeholder="Isikan Nama Anda" autocomplete="name" data-offline-disabled="false">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="form-presence" class="form-label my-1"><i class="fa-solid fa-person-circle-question me-2"></i>Presensi</label>
-                                <select class="form-select shadow-sm rounded-4" id="form-presence" autocomplete="off" data-offline-disabled="false">
-                                    <option value="0" selected>Konfirmasi Presensi</option>
-                                    <option value="1">&#9989; Datang</option>
-                                    <option value="2">&#10060; Berhalangan</option>
-                                </select>
-                            </div>
 
                             <div class="d-block mb-3" id="comment-form-default">
                                 <div id="information" class="alert alert-info alert-dismissible fade show rounded-4" role="alert">

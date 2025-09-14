@@ -8,16 +8,6 @@ export const card = (() => {
     /**
      * @type {ReturnType<typeof storage>|null}
      */
-    let owns = null;
-
-    /**
-     * @type {ReturnType<typeof storage>|null}
-     */
-    let likes = null;
-
-    /**
-     * @type {ReturnType<typeof storage>|null}
-     */
     let config = null;
 
     /**
@@ -52,9 +42,9 @@ export const card = (() => {
      */
     const renderLike = (c) => {
         return `
-        <button style="font-size: 0.8rem;" onclick="undangan.comment.like.love(this)" data-uuid="${c.uuid}" class="btn btn-sm btn-outline-auto ms-auto rounded-3 p-0 shadow-sm d-flex justify-content-start align-items-center" data-offline-disabled="false">
+        <button style="font-size: 0.8rem;" onclick="undangan.comment.like.love(this)" data-uuid="${c.uuid}" data-is-like="${c.is_like ? 'true' : 'false'}" class="btn btn-sm btn-outline-auto ms-auto rounded-3 p-0 shadow-sm d-flex justify-content-start align-items-center" data-offline-disabled="false">
             <span class="my-0 mx-1" data-count-like="${c.like_count}">${c.like_count}</span>
-            <i class="me-1 ${likes.has(c.uuid) ? 'fa-solid fa-heart text-danger' : 'fa-regular fa-heart'}"></i>
+            <i class="me-1 ${c.is_like ? 'fa-solid fa-heart text-danger' : 'fa-regular fa-heart'}"></i>
         </button>`;
     };
 
@@ -70,14 +60,14 @@ export const card = (() => {
         }
 
         if (session.isAdmin() && c.is_admin && (!c.gif_url || gif.isActive())) {
-            action += `<button style="font-size: 0.8rem;" onclick="undangan.comment.edit(this, ${c.is_parent ? 'true' : 'false'})" data-uuid="${c.uuid}" class="btn btn-sm btn-outline-auto rounded-4 py-0 me-1 shadow-sm" data-own="${c.own}" data-offline-disabled="false">Edit</button>`;
-        } else if (owns.has(c.uuid) && config.get('can_edit') !== false && (!c.gif_url || gif.isActive())) {
-            action += `<button style="font-size: 0.8rem;" onclick="undangan.comment.edit(this, ${c.is_parent ? 'true' : 'false'})" data-uuid="${c.uuid}" class="btn btn-sm btn-outline-auto rounded-4 py-0 me-1 shadow-sm" data-offline-disabled="false">Edit</button>`;
+            action += `<button style="font-size: 0.8rem;" onclick="undangan.comment.edit(this)" data-uuid="${c.uuid}" class="btn btn-sm btn-outline-auto rounded-4 py-0 me-1 shadow-sm" data-own="${c.own}" data-offline-disabled="false">Edit</button>`;
+        } else if (c.is_comment && config.get('can_edit') !== false && (!c.gif_url || gif.isActive())) {
+            action += `<button style="font-size: 0.8rem;" onclick="undangan.comment.edit(this)" data-uuid="${c.uuid}" class="btn btn-sm btn-outline-auto rounded-4 py-0 me-1 shadow-sm" data-offline-disabled="false">Edit</button>`;
         }
 
         if (session.isAdmin()) {
             action += `<button style="font-size: 0.8rem;" onclick="undangan.comment.remove(this)" data-uuid="${c.uuid}" class="btn btn-sm btn-outline-auto rounded-4 py-0 me-1 shadow-sm" data-own="${c.own}" data-offline-disabled="false">Delete</button>`;
-        } else if (owns.has(c.uuid) && config.get('can_delete') !== false) {
+        } else if (c.is_comment && config.get('can_delete') !== false) {
             action += `<button style="font-size: 0.8rem;" onclick="undangan.comment.remove(this)" data-uuid="${c.uuid}" class="btn btn-sm btn-outline-auto rounded-4 py-0 me-1 shadow-sm" data-offline-disabled="false">Delete</button>`;
         }
 
@@ -115,22 +105,6 @@ export const card = (() => {
      * @param {ReturnType<typeof dto.getCommentResponse>} c
      * @returns {string}
      */
-    const renderTracker = (c) => {
-        if (!c.ip || !c.user_agent || c.is_admin) {
-            return '';
-        }
-
-        return `
-        <div class="mb-1 mt-3">
-            <p class="text-theme-auto mb-1 mx-0 mt-0 p-0" style="font-size: 0.7rem;" id="ip-${c.uuid}"><i class="fa-solid fa-location-dot me-1"></i>${util.escapeHtml(c.ip)} <span class="mb-1 placeholder col-2 rounded-3"></span></p>
-            <p class="text-theme-auto m-0 p-0" style="font-size: 0.7rem;"><i class="fa-solid fa-mobile-screen-button me-1"></i>${util.parseUserAgent(util.escapeHtml(c.user_agent))}</p>
-        </div>`;
-    };
-
-    /**
-     * @param {ReturnType<typeof dto.getCommentResponse>} c
-     * @returns {string}
-     */
     const renderHeader = (c) => {
         if (c.is_parent) {
             return `class="bg-theme-auto shadow p-3 mx-0 mt-0 mb-3 rounded-4"`;
@@ -144,7 +118,7 @@ export const card = (() => {
      * @returns {string}
      */
     const renderTitle = (c) => {
-        if (c.is_admin) {
+        if (c.presence === null) {
             return `<strong class="me-1">${util.escapeHtml(c.name)}</strong><i class="fa-solid fa-certificate text-primary"></i>`;
         }
 
@@ -193,7 +167,6 @@ export const card = (() => {
         return `
         <div ${renderHeader(c)} id="${c.uuid}" style="overflow-wrap: break-word !important;">
             <div id="body-content-${c.uuid}" data-tapTime="0" data-liked="false" tabindex="0">${body}</div>
-            ${renderTracker(c)}
             ${renderButton(c)}
             <div id="reply-content-${c.uuid}">${resData.join('')}</div>
         </div>`;
@@ -246,12 +219,10 @@ export const card = (() => {
 
     /**
      * @param {string} id 
-     * @param {boolean} presence 
-     * @param {boolean} is_parent 
      * @param {boolean} is_gif 
      * @returns {HTMLDivElement}
      */
-    const renderEdit = (id, presence, is_parent, is_gif) => {
+    const renderEdit = (id, is_gif) => {
         id = util.escapeHtml(id);
 
         const inner = document.createElement('div');
@@ -259,11 +230,6 @@ export const card = (() => {
         inner.id = `inner-${id}`;
         const template = `
         <p class="my-1 mx-0 p-0" style="font-size: 0.95rem;"><i class="fa-solid fa-pen me-2"></i>Edit</p>
-        ${!is_parent ? '' : `
-        <select class="form-select shadow-sm mb-2 rounded-4" id="form-inner-presence-${id}" data-offline-disabled="false">
-            <option value="1" ${presence ? 'selected' : ''}>&#9989; Datang</option>
-            <option value="2" ${presence ? '' : 'selected'}>&#10060; Berhalangan</option>
-        </select>`}
         ${!is_gif ? `<textarea class="form-control shadow-sm rounded-4 mb-2" id="form-inner-${id}" minlength="1" maxlength="1000" placeholder="Type update comment" rows="3" data-offline-disabled="false"></textarea>    
         ` : `${!gif.isActive() ? '' : `<div class="d-none mb-2" id="gif-form-${id}"></div>`}`}
         <div class="d-flex justify-content-end align-items-center mb-0">
@@ -278,8 +244,6 @@ export const card = (() => {
      * @returns {void}
      */
     const init = () => {
-        owns = storage('owns');
-        likes = storage('likes');
         config = storage('config');
         showHide = storage('comment');
     };

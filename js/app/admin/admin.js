@@ -34,7 +34,7 @@ export const admin = (() => {
         storage('config').set('tenor_key', res.data.tenor_key);
         document.dispatchEvent(new Event('undangan.session'));
 
-        request(HTTP_GET, '/api/stats').token(session.getToken()).withCache(1000 * 30).withForceCache().send().then((resp) => {
+        request(HTTP_GET, '/api/stats/comment').token(session.getToken()).withCache(1000 * 30).withForceCache().send().then((resp) => {
             document.getElementById('count-comment').textContent = String(resp.data.comments).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             document.getElementById('count-like').textContent = String(resp.data.likes).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             document.getElementById('count-present').textContent = String(resp.data.present).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -338,12 +338,9 @@ export const admin = (() => {
         session.init();
 
         if (!session.isAdmin()) {
-            storage('owns').clear();
-            storage('likes').clear();
             storage('config').clear();
             storage('comment').clear();
             storage('session').clear();
-            storage('information').clear();
         }
 
         document.addEventListener('DOMContentLoaded', domLoaded);
