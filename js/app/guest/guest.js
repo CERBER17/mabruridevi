@@ -29,37 +29,6 @@ export const guest = (() => {
     /**
      * @returns {void}
      */
-    const countDownDate = () => {
-        const count = (new Date(document.body.getAttribute('data-time').replace(' ', 'T'))).getTime();
-
-        /**
-         * @param {number} num 
-         * @returns {string}
-         */
-        const pad = (num) => num < 10 ? `0${num}` : `${num}`;
-
-        const day = document.getElementById('day');
-        const hour = document.getElementById('hour');
-        const minute = document.getElementById('minute');
-        const second = document.getElementById('second');
-
-        const updateCountdown = () => {
-            const distance = Math.abs(count - Date.now());
-
-            day.textContent = pad(Math.floor(distance / (1000 * 60 * 60 * 24)));
-            hour.textContent = pad(Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
-            minute.textContent = pad(Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)));
-            second.textContent = pad(Math.floor((distance % (1000 * 60)) / 1000));
-
-            util.timeOut(updateCountdown, 1000 - (Date.now() % 1000));
-        };
-
-        util.timeOut(updateCountdown);
-    };
-
-    /**
-     * @returns {void}
-     */
     const showGuestName = () => {
         /**
          * Make sure "to=" is the last query string.
@@ -255,10 +224,10 @@ export const guest = (() => {
         const url = new URL('https://calendar.google.com/calendar/render');
         const data = new URLSearchParams({
             action: 'TEMPLATE',
-            text: 'The Wedding of Wahyu and Riski',
-            dates: `${formatDate('2023-03-15 10:00')}/${formatDate('2023-03-15 11:00')}`,
-            details: 'Tanpa mengurangi rasa hormat, kami mengundang Anda untuk berkenan menghadiri acara pernikahan kami. Terima kasih atas perhatian dan doa restu Anda, yang menjadi kebahagiaan serta kehormatan besar bagi kami.',
-            location: 'RT 10 RW 02, Desa Pajerukan, Kec. Kalibagor, Kab. Banyumas, Jawa Tengah 53191.',
+            text: 'Haflah Akhirussanah PPM Aswaja Nusantara Mlangi',
+            dates: `${formatDate('2026-02-07 20:00')}/${formatDate('2026-02-07 23:59')}`,
+            details: 'Kami mengundang Anda untuk berkenan menghadiri acara Haflah Akhirussanah PPM Aswaja Nusantara Mlangi. Terima kasih atas perhatian dan doa restu Anda.',
+            location: 'PPM Aswaja Nusantara Mlangi',
             ctz: config.get('tz'),
         });
 
@@ -292,25 +261,14 @@ export const guest = (() => {
      */
     const booting = async () => {
         animateSvg();
-        countDownDate();
         showGuestName();
         modalImageClick();
         normalizeArabicFont();
         buildGoogleCalendar();
 
-        if (information.has('presence')) {
-            document.getElementById('form-presence').value = information.get('presence') ? '1' : '2';
-        }
 
-        if (information.get('info')) {
-            document.getElementById('information')?.remove();
-        }
 
-        // wait until welcome screen is show.
-        await util.changeOpacity(document.getElementById('welcome'), true);
 
-        // remove loading screen and show welcome screen.
-        await util.changeOpacity(document.getElementById('loading'), false).then((el) => el.remove());
     };
 
     /**
@@ -325,7 +283,7 @@ export const guest = (() => {
         config = storage('config');
         information = storage('information');
 
-        const vid = video.init();
+        const vid = document.getElementById('video-love-stroy') ? video.init() : { load: () => {} };
         const img = image.init();
         const aud = audio.init();
         const lib = loaderLibs();
@@ -333,7 +291,7 @@ export const guest = (() => {
         const params = new URLSearchParams(window.location.search);
 
         window.addEventListener('resize', util.debounce(slide));
-        document.addEventListener('undangan.progress.done', () => booting());
+        booting();
         document.addEventListener('hide.bs.modal', () => document.activeElement?.blur());
         document.getElementById('button-modal-download').addEventListener('click', (e) => {
             img.download(e.currentTarget.getAttribute('data-src'));
